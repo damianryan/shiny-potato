@@ -1,4 +1,4 @@
-package com.damianryan.aws.play
+package com.damianryan.shinypotato
 
 class Main {
 
