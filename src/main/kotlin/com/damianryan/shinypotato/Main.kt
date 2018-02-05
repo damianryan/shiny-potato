@@ -13,9 +13,6 @@ import java.time.ZonedDateTime
 
 fun main(args: Array<String>) {
 
-    // need to set credentials
-    System.setProperty("aws.accessKeyId", "AKIAIWQRJSVCUDGGOFSQ")
-    System.setProperty("aws.secretKey", "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")
     val config = ClientConfiguration();
     val userAgent = StringBuilder(ClientConfiguration.DEFAULT_USER_AGENT)
     userAgent.append(" ").append("shiny-potato/1.0-SNAPSHOT")
