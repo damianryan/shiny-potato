@@ -6,8 +6,7 @@ data class AllocationWorkUnit(val id: String,
     val quantity: Int
         get() = allocations.map(Allocation::quantity).sum()
 
-    val tradeAllocations: List<TradeAllocation>
-        get() = trades.map { TradeAllocation(it, allocationsForTrade(it)) }
+    fun tradeAllocations() = trades.map { TradeAllocation(it, allocationsForTrade(it)) }
 
     private val trades: Set<Trade>
         get() = allocations.map(Allocation::trades).flatten().toSet()

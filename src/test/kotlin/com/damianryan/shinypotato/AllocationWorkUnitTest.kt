@@ -20,7 +20,7 @@ class AllocationWorkUnitTest {
 
         assertEquals(18, workUnit.quantity, "unexpected work unit quantity")
 
-        val tradeAllocations = workUnit.tradeAllocations
+        val tradeAllocations = workUnit.tradeAllocations()
 
         assertEquals(3, tradeAllocations.size, "unexpected number of allocated trades")
 
