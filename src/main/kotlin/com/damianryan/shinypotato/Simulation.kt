@@ -9,109 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 
-fun main(args: Array<String>) {
-    val ccp = CCPSimulator()
-    val peb = PEBSimulator()
-    ccp.start()
-    peb.start()
-
-    val input = LinkedBlockingQueue<Any>()
-    val output = LinkedBlockingQueue<Any>()
-    val ccpReader = Executors.newSingleThreadExecutor()
-    val pebReader = Executors.newSingleThreadExecutor()
-    val writer = Executors.newSingleThreadExecutor()
-    ccpReader.execute({
-        while (true) {
-            input.add(ccp.read())
-        }
-    })
-    pebReader.execute({
-        while (true) {
-            input.add(peb.read())
-        }
-    })
-    writer.execute({
-        while (true) {
-            val message = output.take()
-            if (message is PEBMessage) {
-                peb.write(message)
-            } else if (message is CCPMessage) {
-                ccp.write(message)
-            }
-        }
-    })
-
-    val gateway = Executors.newSingleThreadExecutor()
-    gateway.execute(Gateway(input, output))
-}
-
-fun toCCPType(type: PEBMessageType): CCPMessageType {
-    when(type) {
-        PEBMessageType.ALLOCATION -> return CCPMessageType.REQUEST
-        else -> throw IllegalArgumentException()
-    }
-}
-
-fun toPEBType(type: CCPMessageType): PEBMessageType {
-    when(type) {
-        CCPMessageType.TRADE -> return PEBMessageType.TRADE
-        CCPMessageType.ACK -> return PEBMessageType.ACK
-        CCPMessageType.NACK -> return PEBMessageType.NACK
-        else -> throw IllegalArgumentException()
-    }
-}
-
-fun toCCPMessage(message: PEBMessage) = CCPMessage(id = message.id,
-        origId = message.origId,
-        type = toCCPType(message.type),
-        side = message.side,
-        quantity = message.quantity,
-        symbol = message.symbol,
-        price = message.price,
-        splits = message.allocs)
-
-fun toPEBMessage(message: CCPMessage) = PEBMessage(id = message.id,
-        origId = message.origId,
-        type = toPEBType(message.type),
-        side = message.side,
-        quantity = message.quantity,
-        symbol = message.symbol,
-        price = message.price,
-        allocs = message.splits)
-
-class Gateway(val input: LinkedBlockingQueue<Any>, val output: LinkedBlockingQueue<Any>) : Runnable {
-
-    override fun run() {
-        while (true) {
-            val next = input.take()
-            when (next) {
-                is PEBMessage -> handleAllocation(next)
-                is CCPMessage -> handleCCPMessage(next)
-                else -> LOGGER.warn("unexpected input message type: {}", next.javaClass)
-            }
-        }
-    }
-
-    private fun handleCCPMessage(next: CCPMessage) {
-        LOGGER.info("gateway processing {}", next)
-        val response = toPEBMessage(next)
-        LOGGER.info("gateway outputting {}", response)
-        output.add(response)
-    }
-
-    private fun handleAllocation(next: PEBMessage) {
-        LOGGER.info("gateway processing {}", next)
-        val response = toCCPMessage(next)
-        LOGGER.info("gateway outputting {}", response)
-        output.add(response)
-    }
-
-    companion object {
-        val LOGGER = LoggerFactory.getLogger(Gateway::class.java)
-    }
-}
-
-class PEBSimulator: AutoCloseable {
+class PEBSimulator : AutoCloseable {
 
     private val toMarket = LinkedBlockingQueue<PEBMessage>()
     private val fromMarket = LinkedBlockingQueue<PEBMessage>()
@@ -132,7 +30,7 @@ class PEBSimulator: AutoCloseable {
     }
 }
 
-class CCPSimulator: AutoCloseable {
+class CCPSimulator : AutoCloseable {
 
     private val toMember = LinkedBlockingQueue<CCPMessage>()
     private val fromMember = LinkedBlockingQueue<CCPMessage>()
@@ -160,7 +58,7 @@ class CCPSimulator: AutoCloseable {
     }
 }
 
-class CCPTradeGenerator(val toMember: LinkedBlockingQueue<CCPMessage>): Runnable {
+class CCPTradeGenerator(val toMember: LinkedBlockingQueue<CCPMessage>) : Runnable {
 
     private val random = Random()
     private val symbols = listOf("OIL", "GAS", "SUN", "HAM", "EGG")
@@ -174,7 +72,8 @@ class CCPTradeGenerator(val toMember: LinkedBlockingQueue<CCPMessage>): Runnable
         val minus = random.nextBoolean()
         val buy = random.nextBoolean()
         val price = basePrice + (if (minus) -priceDelta else priceDelta)
-        val trade = CCPMessage(id = "${CCPSimulator.tradeIds.getAndIncrement()}",
+        val trade = CCPMessage(
+                id = "${CCPSimulator.tradeIds.getAndIncrement()}",
                 side = if (buy) Side.BUY else Side.SELL,
                 quantity = quantity,
                 symbol = symbols[instrumentIndex],
@@ -189,7 +88,7 @@ class CCPTradeGenerator(val toMember: LinkedBlockingQueue<CCPMessage>): Runnable
 }
 
 class CCPResponseGenerator(val toMember: LinkedBlockingQueue<CCPMessage>,
-                           val fromMember: LinkedBlockingQueue<CCPMessage>): Runnable {
+                           val fromMember: LinkedBlockingQueue<CCPMessage>) : Runnable {
 
     private val random = Random()
 
@@ -197,7 +96,11 @@ class CCPResponseGenerator(val toMember: LinkedBlockingQueue<CCPMessage>,
         while (true) {
             val request = fromMember.take()
             val splits = request.splits
-            LOGGER.info("CCP received {}-way allocation request on trade {}", if (null == splits) 1 else splits.size, request.id)
+            LOGGER
+                .info(
+                        "CCP received {}-way allocation request on trade {}",
+                        if (null == splits) 1 else splits.size,
+                        request.id)
             val shouldNack = 13 == random.nextInt(100)
             if (shouldNack) {
                 val nack = request.copy(type = CCPMessageType.NACK)
@@ -209,7 +112,8 @@ class CCPResponseGenerator(val toMember: LinkedBlockingQueue<CCPMessage>,
                 LOGGER.info("CCP generated ack {}", ack)
                 if (1 != splits?.size) {
                     splits?.forEach {
-                        val split = request.copy(id = "${CCPSimulator.tradeIds.getAndIncrement()}",
+                        val split = request.copy(
+                                id = "${CCPSimulator.tradeIds.getAndIncrement()}",
                                 type = CCPMessageType.TRADE,
                                 origId = request.id,
                                 quantity = it,
@@ -228,7 +132,7 @@ class CCPResponseGenerator(val toMember: LinkedBlockingQueue<CCPMessage>,
 }
 
 class Allocator(val toMarket: LinkedBlockingQueue<PEBMessage>,
-                val fromMarket: LinkedBlockingQueue<PEBMessage>): Runnable {
+                val fromMarket: LinkedBlockingQueue<PEBMessage>) : Runnable {
 
     private val random = Random()
 
@@ -270,6 +174,7 @@ class Allocator(val toMarket: LinkedBlockingQueue<PEBMessage>,
         toMarket.add(split)
         LOGGER.info("allocator generated split allocation {}", split)
     }
+
     companion object {
         val LOGGER = LoggerFactory.getLogger(Allocator::class.java)
     }
