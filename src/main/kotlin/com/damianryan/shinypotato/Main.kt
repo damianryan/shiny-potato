@@ -4,6 +4,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput
@@ -27,14 +28,17 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 fun main(args: Array<String>) {
-    consume()
-//    produce()
+    produce()
+//    consume()
 }
 
 fun consume() {
     val logger = LoggerFactory.getLogger("consumer")
 
     val config = clientConfiguration()
+    val factory = RecordProcessorFactory()
+    val worker = Worker.Builder().recordProcessorFactory(factory).config(config).build()
+    worker.run()
 }
 
 fun produce() {
@@ -83,6 +87,7 @@ fun objectMapper(): ObjectMapper {
         findAndRegisterModules()
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         configure(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE, false)
+        enableDefaultTyping()
     }
 }
 
@@ -113,6 +118,7 @@ class RecordProcessor: IRecordProcessor {
 
     private val logger = LoggerFactory.getLogger(RecordProcessor::class.java)
     private val processorId = processorIds.getAndIncrement()
+    private val mapper = objectMapper()
 
     override fun shutdown(input: ShutdownInput?) {
         logger.info("record processor {} shutdown; checkpointer {}, reason {}",
@@ -125,7 +131,12 @@ class RecordProcessor: IRecordProcessor {
     }
 
     override fun processRecords(processRecordsInput: ProcessRecordsInput?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val records = processRecordsInput?.records
+        records?.forEach { val string = String(it.data.array())
+            logger.info(string)
+            val json = mapper.readTree(string)
+            logger.info(json.toString())
+        }
     }
 
     companion object {
