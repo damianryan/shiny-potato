@@ -1,19 +1,24 @@
+group = 'com.damianryan'
+version = '1.0-SNAPSHOT'
+description = """Shiny Potato"""
+
 buildscript {
-    ext.kotlin_version = '1.2.30'
+    ext {
+        kotlin_version = '1.2.30'
+        dokka_version = '0.9.16'
+    }
     repositories {
-        mavenCentral()
+        jcenter()
     }
     dependencies() {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: "$kotlin_version"
+        classpath group: 'org.jetbrains.dokka', name: 'dokka-gradle-plugin', version: "$dokka_version"
     }
 }
 
 apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.dokka'
 
-group = 'com.damianryan'
-version = '1.0-SNAPSHOT'
-
-description = """"""
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -25,35 +30,50 @@ tasks.withType(JavaCompile) {
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
         suppressWarnings = true
+        javaParameters = true
+        jvmTarget = targetCompatibility
     }
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform() // use JUnit 5
+}
+
+dokka {
+    outputFormat = 'html'
+    outputDirectory = "$buildDir/javadoc"
 }
 
 repositories {
-     mavenCentral()
+    jcenter()
+}
+
+ext {
+    jackson_version = '2.9.4'
+    janino_version = '3.0.8'
+    junit_platform_version = '5.1.0'
+    logback_version = '1.2.3'
+    slf4j_version = '1.7.25'
 }
 
 dependencies {
-    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version:"$kotlin_version"
-    compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version:"$kotlin_version"
-    compile group: 'org.slf4j', name: 'slf4j-api', version:'1.7.25'
-    compile group: 'ch.qos.logback', name: 'logback-classic', version:'1.2.3'
-    compile group: 'org.codehaus.janino', name: 'janino', version:'3.0.8'
-    compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version:'1.8.10'
-    compile group: 'com.amazonaws', name: 'amazon-kinesis-producer', version:'0.12.8'
-    compile(group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version:'2.9.4') {
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: "$kotlin_version"
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version: "$kotlin_version"
+    compile group: 'org.slf4j', name: 'slf4j-api', version: "$slf4j_version"
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: "$logback_version"
+    compile group: 'org.codehaus.janino', name: 'janino', version: "$janino_version"
+    compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.8.10'
+    compile group: 'com.amazonaws', name: 'amazon-kinesis-producer', version: '0.12.8'
+    compile(group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: "$jackson_version") {
         exclude(module: 'kotlin-reflect')
     }
-    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version:'2.9.4'
-    compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version:'2.9.4'
+    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: "$jackson_version"
+    compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "$jackson_version"
 
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version:'5.1.0'
-    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version:'5.1.0'
-    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test', version:"$kotlin_version"
-    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-junit', version:"$kotlin_version"
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: "$junit_platform_version"
+    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: "$junit_platform_version"
+    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test', version: "$kotlin_version"
+    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-junit', version: "$kotlin_version"
 }
 
 
